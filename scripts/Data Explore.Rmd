@@ -1,0 +1,88 @@
+---
+title: "Data Explore"
+author: "Vinita Vader"
+date: "07/28/2021"
+geometry: margin=2cm
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+    number_sections: yes
+    highlight: tango
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+#options(Encoding="UTF-8")
+knitr::opts_chunk$set(
+  eval = TRUE,
+	echo = TRUE,
+	fig.height = 7,
+	fig.width = 8,
+	message = FALSE,
+	errors = TRUE,
+	warnings = FALSE)
+
+library(tidyverse)
+library(tinytex)
+library(knitr)
+library(jtools)
+library(knitr)
+library(stargazer)
+library(kableExtra)
+
+
+theme_set(theme_minimal() +theme(legend.position = "top")) #set theme
+# set up so that all variables of tibbles are printed
+options(dplyr.width = Inf)
+```
+
+# Data 
+```{r}
+data.Original = rio::import(here::here("data", "PersianPersonality360AdjectivesEnglishTrans_ORIGINALdata.xlsx"), setclass = "tbl_df") %>%
+  rio::characterize() %>% 
+  janitor::clean_names() 
+
+#names(data.Original)
+#Words between col numbers 7:367["irascible":"open_handed"]
+
+adj.Original = data.Original %>% select(7:366)
+#names(adj.Original)
+table(is.na(adj.Original)) #check if there are any missing values
+
+#Data ipsatized in SPSS
+data.Ipsatized = rio::import(here::here("data", "PersianPersonality360AdjectivesEnglishTrans_IPSATIZED.xlsx"), setclass = "tbl_df") %>%
+  rio::characterize() %>% 
+  janitor::clean_names() 
+
+#names(data.Ipsatized)
+adj.Ipsatized  = data.Ipsatized %>% select(2:361)
+table(is.na(adj.Ipsatized)) #check if there are any missing values
+```
+# Parallel Analysis
+
+### PA - Original data
+```{r}
+PA_original = paran::paran(adj.Original, iterations = 100, 
+                           quietly = FALSE, status = FALSE, 
+                          all = FALSE, cfa = FALSE, graph = TRUE, 
+                          color = TRUE, col = c("black", "red", "blue"), 
+                          lty = c(1, 2, 3), lwd = 1, legend = TRUE, 
+                          file = "", width = 640, height = 640, 
+                          grdevice = "png", seed = 0)
+```
+Parallel analysis suggested 22 components for Original data.
+
+### PA - Ipsatized data
+```{r}
+PA_ipsatized = paran::paran(adj.Ipsatized, iterations = 100, 
+                           quietly = FALSE, status = FALSE, 
+                          all = FALSE, cfa = FALSE, graph = TRUE, 
+                          color = TRUE, col = c("black", "red", "blue"), 
+                          lty = c(1, 2, 3), lwd = 1, legend = TRUE, 
+                          file = "", width = 640, height = 640, 
+                          grdevice = "png", seed = 0)
+```
+Parallel analysis suggested 31 components for Ipsatized data.
