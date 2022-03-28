@@ -1,0 +1,278 @@
+---
+title: "Factor Congruence coefficient"
+author: "Vinita Vader"
+output:
+  html_document: 
+    toc: yes
+    toc_float: true
+    df_print: paged
+    theme: cosmo
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(jtools)
+library(readxl)
+library(readr)
+library(glue)
+library(vctrs)
+library(fs)
+library(kableExtra)
+library(DT)
+library(rmarkdown)
+library(purrr)
+library(knitr)
+
+options("digits" = 6)
+```
+
+
+# Functions
+##  Data wrangling 
+   - data to obtain inputs for congruence coefficient matrices 
+```{r}
+#Call data = Ipsatized or Original data 
+files <- function(dataType){
+  dir_ls(here::here("data"))%>%
+  as_tibble() %>% 
+  filter(str_detect(value, {{dataType}}))
+}
+
+#creating the main col names - factor# and dpecify g or ng
+rename_df <- function(d) {
+  #look for the col which has sum of NA's equal to the number of rows in the data frame - we want to remove this blank col - output is logical
+  col_miss_log <- apply(d, 2, function(x) sum(is.na(x)) == nrow(d))
+  #Give the col which has logical = T; this is the blank col
+  col_miss <- seq_along(d)[col_miss_log]
+  #Remove the first col, the blank col and the co next to blank col
+  d_subset <- d[ ,-c(1, col_miss, col_miss + 1)]
+  #create the main stem for g_
+  nms1 <- gsub("^(\\d?\\d).+", "g_\\1", names(d_subset)[seq(1, col_miss - 2)])
+  nms2 <- gsub("^(\\d?\\d).+", "ng_\\1", names(d_subset)[seq(col_miss - 1, length(names(d_subset)))])
+  names(d_subset) <- c(nms1, nms2)
+  d_subset
+}
+
+#add sheet name to the factor names = g/ng_sheetname_fact#
+add_sheetname <- function(d, sheetname) {
+  d <- rename_df(d)
+  prefix <- gsub("\\d", "", names(d))
+  digits <- gsub("\\D", "", names(d))
+  nms <- paste0(prefix, sheetname, "_", digits)
+  names(d) <- nms
+  d
+}
+
+
+final_data <- function(dataType){
+  file <- files({{dataType}})
+  sheets <- readxl::excel_sheets(file$value)
+  list_sheets <- map(sheets, ~readxl::read_xlsx(file$value, sheet = .x, n_max = 360))
+
+  list_all_sheets <- map2(list_sheets, sheets, add_sheetname)
+  list_all_sheets
+}
+```
+
+## Input for HungarianSolver
+```{r}
+#splits each list into two dataframes called grads and non-grads
+split_list <- function(d){
+  #create the "grads" dataframe
+  grads <- d %>%
+   data.frame() %>% 
+    dplyr::select(starts_with('g')) %>% 
+    tibble()
+  
+   #create the "non-grads" dataframe
+  nograds <- d %>%
+   data.frame() %>% 
+    dplyr::select(starts_with('ng')) %>% 
+    tibble()
+
+  #build a list of these two dataframes
+l <- list(grads, nograds)
+names(l) <- c("grads", "nograds")
+l #output the list
+}
+
+
+#Get a list of all congruence coefficients 
+congrunce_mat_unnamed <- function(dataType){
+  
+  #get the list of sheets - appropriate var names
+  ips.raw_data <- final_data({{dataType}})
+  
+  #split the lists into grads and non-grads dfs
+  list_all <- map(ips.raw_data, split_list)
+  
+  #get congruence coefficients for each list
+ map(list_all, ~psych::factor.congruence(.x$grads, .x$nograds))
+}
+
+#Get a list of all congruence coefficients with named matrices 
+congrunce_mat <- function(dataType){
+  #list of matrices but unnamed
+  list_mats <- congrunce_mat_unnamed ({{dataType}})
+  
+  #get the sheet name to be used for naming the matrices
+    file <- files({{dataType}})
+  sheet_name <- readxl::excel_sheets(file$value)
+  
+  #name the dataframes in the list
+  names(list_mats) <- c(sheet_name)
+  
+  #named dataframes in a list of congruence coefficient matrices
+  list_mats
+}
+
+
+```
+
+## Matching pairs and melted matrix
+```{r}
+#Adds id columns to the pairs 
+ add_id_pairs <- function(pair){
+   df <- pair %>% 
+     data.frame() %>% 
+     mutate(id = str_c(X1, "_",X2)) %>% 
+     rename( "grad" = "X1",
+            "no_grad" = "X2" )
+   df
+ }
+ 
+ #Adds id columns to the mat long 
+ add_id_matLong <- function(mat_long){
+retain_rows <- mat_long %>%
+  data.frame() %>% 
+  #extract digits after the 2nd underscore
+  mutate(id_g = str_extract(Var1 , "[^_]*$"), 
+         id_ng = str_extract(Var2 , "[^_]*$"), 
+         id = paste0(id_g, "_", id_ng)) %>% 
+  select(-id_g, - id_ng)
+retain_rows
+ }
+ 
+#Fucntion to compute congruence coefficients
+ compute_avg.cc <- function(model){
+  avg_cc <- model %>% 
+      summarise(avg_cc = mean(abs(cc)))
+  avg_cc 
+}
+```
+
+# Data for Congruence coefficient matrix
+ -  columns are renamed 
+ -  list of matrices for every sheet 
+```{r message=FALSE}
+ips_data <- congrunce_mat ("Ipsatized")
+orig_data <- congrunce_mat ("Original")
+```
+
+
+```{r}
+#In Hungarian $pairs 
+# [,1 ] -rownames - "grads"; [,2] - colnames - "non-grads"
+RcppHungarian::HungarianSolver(-1*(abs(x)))$pairs
+
+    pairings_ips <- map(ips_data, ~RcppHungarian::HungarianSolver(-1*(abs(.x)))$pairs)#only retain the pairs information 
+    pairings_ips <- map(pairings_ips, add_id_pairs)#pairs with id_col
+    
+    pairings_orig <- map(orig_data, ~RcppHungarian::HungarianSolver(-1*(abs(.x)))$pairs)#only retain the pairs information 
+    pairings_orig <- map(pairings_orig, add_id_pairs) #pairs with id_col
+```
+
+# Melt matrices
+ - melt the congruence coefficient matrices 
+ - use an id to retain rows which overlap with the pairs
+ - compute average of all absolute values of congruence coefficient for every model 
+```{r message=FALSE}
+#Figure out how to set decimal places to three in R
+# Output of the factors used for the average cc
+#Output table for avg. cc's
+options(digits=3)
+z = congrunce_mat("Ipsatized") 
+mat_long_ips <- map(z, ~reshape2::melt(.x, na.rm=TRUE, value.name="cc"))
+mat_long_ips <- map(mat_long_ips, add_id_matLong) #mat_long with id_col
+
+r = congrunce_mat("Original") 
+mat_long_orig <- map(r, ~reshape2::melt(.x, na.rm=TRUE, value.name="cc"))
+mat_long_orig <- map(mat_long_orig, add_id_matLong)#mat_long with id_col
+```
+
+# Original Data 
+
+```{r message=FALSE}
+#retain the relevant rows in mat_long, they match with the pairings 
+final_cc_list_r <- map2(mat_long_orig, pairings_orig, semi_join, by = "id")
+
+all_avg.cc_r <- map(final_cc_list_r,compute_avg.cc) %>% 
+               reshape2::melt() %>% 
+               select(-variable) %>% 
+               rename("Model" = "L1", 
+                      "Avg_cc" = "value") %>% 
+               select(Model, Avg_cc) %>% 
+               mutate(Avg_cc = round(Avg_cc,2))
+```
+
+
+## Original - Pairings
+```{r include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE, results='asis')
+
+data.frame() %>%
+  DT::datatable() %>%
+  knitr::knit_print() %>%
+  attr('knit_meta') %>%
+  knitr::knit_meta_add() %>%
+  invisible()
+```
+
+```{r, results='asis'}
+map(final_cc_list_r, ~DT::datatable(.x,  options = list(columnDefs = list(list(className = 'dt-center', targets = 0:4)))) %>%
+      htmltools::tagList() %>%
+      print())
+```
+
+## Original - Average congruence Coefficients 
+```{r}
+ DT::datatable(all_avg.cc_r, options = list(columnDefs = list(list(className = 'dt-center')))) 
+```
+
+# Ipsatized Data 
+```{r message=FALSE}
+#retain the relevant rows in mat_long, they match with the pairings 
+final_cc_list_z <- map2(mat_long_ips, pairings_ips, semi_join, by = "id")
+
+all_avg.cc_z <- map(final_cc_list_z,compute_avg.cc) %>% 
+               reshape2::melt() %>% 
+               select(-variable) %>% 
+               rename("Model" = "L1", 
+                      "Avg_cc" = "value") %>% 
+               select(Model, Avg_cc) %>% 
+               mutate(Avg_cc = round(Avg_cc,2))
+```
+
+## Ipsatized - Pairings  
+```{r, results='asis'}
+map(final_cc_list_z, ~DT::datatable(.x, options = list(columnDefs = list(list(className = 'dt-center', targets = 0:4)))) %>% 
+      htmltools::tagList() %>%
+      print())
+```
+
+## Ipsatized - Average congruence Coefficients 
+```{r}
+ DT::datatable(all_avg.cc_z, options = list(columnDefs = list(list(className = 'dt-center')))) 
+```
+
+
+```{r echo=FALSE, eval=FALSE}
+#Write in excel sheet to send 
+filename <- "/Users/vinitavader/Desktop/EVERYTHING/Persian_High Dimensionality/scripts/models_cc.xlsx"
+
+rio::export(list(Orig_models = all_avg.cc_r, Ips_models = all_avg.cc_r), filename)
+```
+

@@ -1,0 +1,760 @@
+---
+title: "Factor Congruence MF"
+subtitle: "Computing Factor Congrunce Across rater sex"
+date: "10/05/2020"
+geometry: margin=2cm
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: yes
+    number_sections: yes
+    highlight: tango
+  html_document:
+    toc: yes
+    df_print: paged
+---
+
+```{r, message = FALSE, warning = FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(tidyverse)
+library(lsr)
+library(pander)
+library(stringr)
+library(reshape2)
+library(ggthemes)
+library(psychometric)
+library(ltm)
+library(nFactors)
+library(paran)
+library(cluster)    # clustering algorithms
+library(factoextra) # clustering algorithms & visualization
+library(foreign)
+library(multicon) #function ipsatize
+library(GPArotation) #oblimin rotation
+library(rJava)
+library(xlsx)
+library(DT)
+require(moonBook)
+require(ztable)
+suppressMessages(library(rrcov3way))
+library(RegularizedSCA)
+library("readxl")
+library(skimr)
+```
+
+## Functions 
+```{r}
+dataMF = rio::import(here::here("data", "FemaleMaleTargetLoadingMatrices_ALL.xlsx"), setclass = "tbl_df")
+
+plot.heatmap.original <- function(mat1,mat2,mytitle){
+  factor.congruence(mat1,mat2) %>% 
+  as.data.frame() %>% 
+  mutate(factor1 = rownames(.)) %>% 
+  gather(key = factor2, value = r, -factor1) %>% 
+  ggplot(mapping = aes(x = factor1, y = factor2, fill = r, label = r)) +
+      geom_tile() +
+      geom_text() +
+      ggtitle(mytitle) +
+      scale_fill_gradient2()
+}
+
+plot.heatmap.abs <- function(mat1,mat2,mytitle){
+  abs(factor.congruence(mat1,mat2)) %>% 
+  as.data.frame() %>% 
+  mutate(factor1 = rownames(.)) %>% 
+  gather(key = factor2, value = r, -factor1) %>% 
+  ggplot(mapping = aes(x = factor1, y = factor2, fill = r, label = r)) +
+      geom_tile() +
+      geom_text() +
+      ggtitle(mytitle) +
+      scale_fill_gradient2()
+}
+
+callData = function(sheetName){
+  rio::import(here::here("data", "FemaleMaleTargetLoadingMatrices_ALL.xlsx"), setclass = "tbl_df", sheet = {{sheetName}})
+}
+
+```
+
+## Unrotated Raw and Ipsatized 
+```{r}
+#Raw nrotated 1
+FMraw_unr1 = callData("FMraw_unr1")
+
+Fr_unr1 = FMraw_unr1 %>% dplyr::select(Fr.unr1_1)
+Mr_unr1 = FMraw_unr1 %>% dplyr::select(Mr.unr1_1)
+FC_FMraw.unr1 = factor.congruence(Fr_unr1, Mr_unr1)
+
+FMraw.unr1_p = plot.heatmap.original(Fr_unr1, Mr_unr1, "FMrUnr1_original")
+FMraw.unr1_pAbs = plot.heatmap.abs(Fr_unr1, Mr_unr1, "FMrUnr1_abs")
+(M_FMraw.unr1 = mean(abs(FC_FMraw.unr1[1,1])))
+
+#Ips unrotated 1
+FMz_unr1 = callData("FMz_unr1")
+
+Fz_unr1 = FMz_unr1 %>% dplyr::select(Fz.unr1_1)
+Mz_unr1 = FMz_unr1 %>% dplyr::select(Mz.unr1_1)
+FC_FMz.unr1 = factor.congruence(Fz_unr1, Mz_unr1)
+
+FMz.unr1_p = plot.heatmap.original(Fz_unr1, Mz_unr1, "FMzUnr1_original")
+FMz.unr1_pAbs = plot.heatmap.abs(Fz_unr1, Mz_unr1, "FMzUnr1_abs")
+(M_FMz.unr1 = mean(abs(FC_FMz.unr1[1,1])))
+```
+
+## Raw Varimax
+```{r}
+#Raw varimax 2
+FMraw_vx2 = callData("FMraw_vx2")
+
+Fr_vx2 = FMraw_vx2 %>%dplyr::select(Fr.vx2_1:Fr.vx2_2)
+Mr_vx2 = FMraw_vx2 %>%dplyr::select(Mr.vx2_1:Mr.vx2_2)
+FC_FMr.vx2 = factor.congruence(Fr_vx2 , Mr_vx2)
+
+FMraw.vx2_p = plot.heatmap.original(Fr_vx2, Mr_vx2, "FMrVar2_original")
+FMraw.vx2_pAbs = plot.heatmap.abs(Fr_vx2, Mr_vx2, "FMrVar2_abs")
+(M_FMraw.vx2 = mean(abs(FC_FMr.vx2[1,1]),abs(FC_FMr.vx2[2,2])))
+
+optimum_cc(Fr_vx4, Mr_vx4)
+
+#Raw varimax 3
+FMraw_vx3 = callData("FMraw_vx3") 
+
+Fr_vx3 = FMraw_vx3 %>% dplyr::select(Fr.vx3_1:Fr.vx3_3)
+Mr_vx3 = FMraw_vx3%>% dplyr::select(Mr.vx3_1:Mr.vx3_3)
+FC_FMr.vx3 = factor.congruence(Fr_vx3 , Mr_vx3)
+
+FMraw.vx3_p = plot.heatmap.original(Fr_vx3, Mr_vx3, "FMrVar3_original")
+FMraw.vx3_pAbs = plot.heatmap.abs(Fr_vx3, Mr_vx3, "FMrVar3_abs")
+(M_FMraw.vx3 = mean(abs(FC_FMr.vx3[3,1]),abs(FC_FMr.vx3[2,2]),abs(FC_FMr.vx3[1,3])))
+
+
+#Raw varimax 4
+FMraw_vx4 = callData( "FMraw_vx4") 
+
+Fr_vx4 = FMraw_vx4 %>% dplyr::select(Fr.vx4_1:Fr.vx4_4)
+Mr_vx4 = FMraw_vx4%>% dplyr::select(Mr.vx4_1:Mr.vx4_4)
+FC_FMr.vx4 = psych::factor.congruence(Fr_vx4 , Mr_vx4)
+
+cr= FC_FMr.vx4
+
+
+library(RcppHungarian)
+cost.of.matchings <- rbind(c(0,1,2,3),
+                           c(4,2,1,0), 
+                           c(9, 1, 0, 5))
+cost_mat2 <- (-1*(FC_FMr.vx4))
+HungarianSolver(cost.of.matchings)
+HungarianSolver(-1*(abs(FC_FMr.vx4)))
+
+
+optimum_cc(Fr_vx4, Mr_vx4)
+
+optimum_cc <- function(x, y){
+  
+  #build data 
+  congruence_mat = psych::factor.congruence({{x}} , {{y}})
+  mat_long = reshape2::melt(congruence_mat, na.rm=TRUE, value.name="cc") %>% 
+    arrange(desc(abs(cc)))
+  
+  #build a dataframe for combinations
+  df_comb = tibble(
+    Var1 = rep(names({{x}}), factorial(ncol({{x}}))) ,
+    Var2  = combinat::permn(c(names({{y}})))%>%unlist(), 
+    group = rep(c(1:factorial(ncol({{x}}))), times = c(rep(ncol({{x}}),factorial(ncol({{x}})))))
+   )
+  
+  #dataframe with all combinations
+  all_comb = left_join(df_comb, mat_long)
+  
+  #optimum group number
+  group_no <- all_comb %>% 
+               group_by(group) %>% 
+               summarise(cc_sum = sum(abs(cc))) %>% 
+               arrange(desc(cc_sum)) %>% 
+               head(1) %>% 
+               pull(group)
+
+  #pull the combination with the optimum cc value
+  all_comb %>% 
+      filter(group == group_no)
+}
+
+FMraw_vx11 = callData("FMraw_vx11")
+Fr_vx11 = FMraw_vx11 %>% dplyr::select(Fr.vx11_1:Fr.vx11_11)
+Mr_vx11 = FMraw_vx11%>% dplyr::select(Mr.vx11_1:Mr.vx11_11)
+FC_FMr.vx11 = psych::factor.congruence(Fr_vx11 , Mr_vx11)
+
+HungarianSolver(-1*(abs(FC_FMr.vx11)))
+optimum_cc(Fr_vx11 , Mr_vx11)
+
+l = optimum_cc(Fr_vx11 , Mr_vx11)
+l %>% 
+  summarise(average = mean(abs(cc)))
+  
+#install.packages("tictoc")
+require(tictoc)
+tic()
+#--code--
+exectime <- toc()
+exectime <- exectime$toc - exectime$tic
+
+# What is the set of rows which yields the highest cc values with the constraint that neither of the columns has a recurring variable in it
+
+FMraw.vx4_p = plot.heatmap.original(Fr_vx4, Mr_vx4, "FMrVar4_original")
+FMraw.vx4_pAbs = plot.heatmap.abs(Fr_vx4, Mr_vx4, "FMrVar4_abs")
+(M_FMraw.vx4 = mean(abs(FC_FMr.vx4[1,1]),abs(FC_FMr.vx4[2,2]),abs(FC_FMr.vx4[3,3]), abs(FC_FMr.vx4[4,4])))
+
+
+#Raw varimax 5
+FMraw_vx5 = callData("FMraw_vx5")
+
+Fr_vx5 = FMraw_vx5 %>% dplyr::select(Fr.vx5_1:Fr.vx5_5)
+Mr_vx5 = FMraw_vx5 %>% dplyr::select(Mr.vx5_1:Mr.vx5_5)
+FC_FMr.vx5 = factor.congruence(Fr_vx5 , Mr_vx5)
+
+FMraw.vx5_p = plot.heatmap.original(Fr_vx5, Mr_vx5, "FMrVar5_original")
+FMraw.vx5_pAbs = plot.heatmap.abs(Fr_vx5, Mr_vx5, "FMrVar5_abs")
+(M_FMraw.vx5 = mean(abs(FC_FMr.vx5[1,5]),abs(FC_FMr.vx5[2,2]),abs(FC_FMr.vx5[3,1]), abs(FC_FMr.vx5[4,3]),  abs(FC_FMr.vx5[5,4])))
+
+
+#Raw varimax 6
+FMraw_vx6 = callData("FMraw_vx6")
+
+Fr_vx6 = FMraw_vx6 %>% dplyr::select(Fr.vx6_1:Fr.vx6_6)
+Mr_vx6 = FMraw_vx6%>% dplyr::select(Mr.vx6_1:Mr.vx6_6)
+FC_FMr.vx6 = factor.congruence(Fr_vx6 , Mr_vx6)
+
+FMraw.vx6_p = plot.heatmap.original(Fr_vx6, Mr_vx6, "FMrVar6_original")
+FMraw.vx6_pAbs = plot.heatmap.abs(Fr_vx6, Mr_vx6, "FMrVar6_abs")
+(M_FMraw.vx6 = mean(abs(FC_FMr.vx6[1,4]),abs(FC_FMr.vx6[2,2]),abs(FC_FMr.vx6[3,1]), abs(FC_FMr.vx6[4,3]),  abs(FC_FMr.vx6[5,5]), abs(FC_FMr.vx6[6,6])))
+
+
+#Raw varimax 7
+FMraw_vx7 = callData("FMraw_vx7")
+
+Fr_vx7 = FMraw_vx7 %>% dplyr::select(Fr.vx7_1:Fr.vx7_7)
+Mr_vx7 = FMraw_vx7%>% dplyr::select(Mr.vx7_1:Mr.vx7_7)
+FC_FMr.vx7 = factor.congruence(Fr_vx7 , Mr_vx7)
+
+HungarianSolver(-1*(abs(FC_FMr.vx7)))
+optimum_cc(Fr_vx7 , Mr_vx7)
+
+FMraw.vx7_p = plot.heatmap.original(Fr_vx7, Mr_vx7, "FMrVar7_original")
+FMraw.vx7_pAbs = plot.heatmap.abs(Fr_vx7, Mr_vx7, "FMrVar7_abs")
+(M_FMraw.vx7 = mean(abs(FC_FMr.vx7[1,3]),abs(FC_FMr.vx7[2,2]),abs(FC_FMr.vx7[3,1]), abs(FC_FMr.vx7[4,4]), abs(FC_FMr.vx7[5,6]),  abs(FC_FMr.vx7[6,7]), abs(FC_FMr.vx7[7,5])))
+
+
+#Raw varimax 8
+FMraw_vx8 = callData("FMraw_vx8")
+Fr_vx8 = FMraw_vx8 %>%dplyr::select(Fr.vx8_1:Fr.vx8_8)
+Mr_vx8 = FMraw_vx8%>%dplyr::select(Mr.vx8_1:Mr.vx8_8)
+FC_FMr.vx8 = factor.congruence(Fr_vx8 , Mr_vx8)
+
+FMraw.vx8_p = plot.heatmap.original(Fr_vx8, Mr_vx8, "FMrVar8_original")
+FMraw.vx8_pAbs = plot.heatmap.abs(Fr_vx8, Mr_vx8, "FMrVar8_abs")
+(M_FMraw.vx8 = mean(abs(FC_FMr.vx8[1,1]),abs(FC_FMr.vx8[2,2]),abs(FC_FMr.vx8[3,3]), abs(FC_FMr.vx8[4,4]), abs(FC_FMr.vx8[5,5]),  abs(FC_FMr.vx8[6,8]), abs(FC_FMr.vx8[7,6]), abs(FC_FMr.vx8[8,7])))
+
+```
+
+##Ipsatized Varimax
+```{r, eval = FALSE }
+
+#Ips varimax 2
+FMz_vx2 = callData("FMz_vx2")
+Fz_vx2 = FMz_vx2 %>% dplyr::select(Fz.vx2_1:Fz.vx2_2)
+Mz_vx2 = FMz_vx2 %>% dplyr::select(Mz.vx2_1:Mz.vx2_2)
+FC_FMz.vx2 = factor.congruence(Fz_vx2 , Mz_vx2)
+
+FMz.vx2_p = plot.heatmap.original(Fz_vx2, Mz_vx2, "FMzVar2_original")
+FMz.vx2_pAbs = plot.heatmap.abs(Fz_vx2, Mz_vx2, "FMzVar2_abs")
+(M_FMz.vx2 = mean(abs(FC_FMz.vx2[1,1]),abs(FC_FMz.vx2[2,2])))
+
+
+#Ips varimax 3
+FMz_vx3 = callData("FMz_vx3")
+Fz_vx3 = FMz_vx3 %>% dplyr::select(Fz.vx3_1:Fz.vx3_3)
+Mz_vx3 = FMz_vx3%>% dplyr::select(Mz.vx3_1:Mz.vx3_3)
+FC_FMz.vx3 = factor.congruence(Fz_vx3 , Mz_vx3)
+
+FMz.vx3_p = plot.heatmap.original(Fz_vx3, Mz_vx3, "FMzVar3_original")
+FMz.vx3_pAbs = plot.heatmap.abs(Fz_vx3, Mz_vx3, "FMzVar3_abs")
+(M_FMz.vx3 = mean(abs(FC_FMz.vx3[1,1]),abs(FC_FMz.vx3[2,2]),abs(FC_FMz.vx3[3,3])))
+
+
+#Ips varimax 4
+FMz_vx4 = callData("FMz_vx4")
+Fz_vx4 = FMz_vx4 %>% dplyr::select(Fz.vx4_1:Fz.vx4_4)
+Mz_vx4 = FMz_vx4 %>% dplyr::select(Mz.vx4_1:Mz.vx4_4)
+FC_FMz.vx4 = factor.congruence(Fz_vx4 , Mz_vx4)
+
+FMz.vx4_p = plot.heatmap.original(Fz_vx4, Mz_vx4, "FMzVar4_original")
+FMz.vx4_pAbs = plot.heatmap.abs(Fz_vx4, Mz_vx4, "FMzVar4_abs")
+(M_FMz.vx4 = mean(abs(FC_FMz.vx4[1,1]),abs(FC_FMz.vx4[2,4]),abs(FC_FMz.vx4[3,3]), abs(FC_FMz.vx4[4,2])))
+
+#Ips varimax 5
+FMz_vx5 = callData("FMz_vx5")
+Fz_vx5 = FMz_vx5 %>% dplyr::select(Fz.vx5_1:Fz.vx5_5)
+Mz_vx5 = FMz_vx5%>% dplyr::select(Mz.vx5_1:Mz.vx5_5)
+FC_FMz.vx5 = factor.congruence(Fz_vx5 , Mz_vx5)
+
+FMz.vx5_p = plot.heatmap.original(Fz_vx5, Mz_vx5, "FMzVar5_original")
+FMz.vx5_pAbs = plot.heatmap.abs(Fz_vx5, Mz_vx5, "FMzVar5_abs")
+(M_FMz.vx5 = mean(abs(FC_FMz.vx5[1,1]),abs(FC_FMz.vx5[2,3]),abs(FC_FMz.vx5[3,2]), abs(FC_FMz.vx5[4,4]),  abs(FC_FMz.vx5[5,5])))
+
+
+#Ips varimax 6
+FMz_vx6 = callData("FMz_vx6")
+Fz_vx6 = FMz_vx6 %>% dplyr::select(Fz.vx6_1:Fz.vx6_6)
+Mz_vx6 = FMz_vx6%>% dplyr::select(Mz.vx6_1:Mz.vx6_6)
+FC_FMz.vx6 = factor.congruence(Fz_vx6 , Mz_vx6)
+
+FMz.vx6_p = plot.heatmap.original(Fz_vx6, Mz_vx6, "FMzVar6_original")
+FMz.vx6_pAbs = plot.heatmap.abs(Fz_vx6, Mz_vx6, "FMzVar6_abs")
+(M_FMz.vx6 = mean(abs(FC_FMz.vx6[1,1]),abs(FC_FMz.vx6[2,3]),abs(FC_FMz.vx6[3,4]), abs(FC_FMz.vx6[4,2]),  abs(FC_FMz.vx6[5,5]), abs(FC_FMz.vx6[6,6])))
+
+
+#Ips varimax 7
+FMz_vx7 = callData("FMz_vx7")
+Fz_vx7 = FMz_vx7 %>% dplyr::select(Fz.vx7_1:Fz.vx7_7)
+Mz_vx7 = FMz_vx7 %>% dplyr::select(Mz.vx7_1:Mz.vx7_7)
+FC_FMz.vx7 = factor.congruence(Fz_vx7 , Mz_vx7)
+
+FMz.vx7_p = plot.heatmap.original(Fz_vx7, Mz_vx7, "FMzVar7_original")
+FMz.vx7_pAbs = plot.heatmap.abs(Fz_vx7, Mz_vx7, "FMzVar7_abs")
+(M_FMz.vx7 = mean(abs(FC_FMz.vx7[1,1]),abs(FC_FMz.vx7[2,3]),abs(FC_FMz.vx7[3,2]), abs(FC_FMz.vx7[4,4]), abs(FC_FMz.vx7[5,7]),  abs(FC_FMz.vx7[6,6]), abs(FC_FMz.vx7[7,5])))
+
+
+#Ips varimax 8
+FMz_vx8 = callData("FMz_vx8")
+Fz_vx8 = FMz_vx8 %>% dplyr::select(Fz.vx8_1:Fz.vx8_8)
+Mz_vx8 = FMz_vx8 %>% dplyr::select(Mz.vx8_1:Mz.vx8_8)
+FC_FMz.vx8 = factor.congruence(Fz_vx8 , Mz_vx8)
+
+FMz.vx8_p = plot.heatmap.original(Fz_vx8, Mz_vx8, "FMzVar8_original")
+FMz.vx8_pAbs = plot.heatmap.abs(Fz_vx8, Mz_vx8, "FMzVar8_abs")
+(M_FM.vx8 = mean(abs(FC_FMz.vx8[1,1]),abs(FC_FMz.vx8[2,3]),abs(FC_FMz.vx8[3,4]), abs(FC_FMz.vx8[4,6]), abs(FC_FMz.vx8[5,2]),  abs(FC_FMz.vx8[6,5]), abs(FC_FMz.vx8[7,7]), abs(FC_FMz.vx8[8,8])))
+```
+##Raw Oblimin
+```{r, eval = FALSE }
+#Raw Oblimin 2
+FMraw_ob2 = callData("FMraw_ob2")
+Fr_ob2 = FMraw_ob2 %>% dplyr::select(Fr.ob2_1:Fr.ob2_2)
+Mr_ob2 = FMraw_ob2 %>% dplyr::select(Mr.ob2_1:Mr.ob2_2)
+FC_FMr.ob2 = factor.congruence(Fr_ob2 , Mr_ob2)
+
+FMraw.ob2_p = plot.heatmap.original(Fr_ob2, Mr_ob2, "FMrOb2_original")
+FMraw.ob2_pAbs = plot.heatmap.abs(Fr_ob2, Mr_ob2, "FMrOb2_abs")
+(M_FMraw.ob2 = mean(abs(FC_FMr.ob2[1,1]),abs(FC_FMr.ob2[2,2])))
+ 
+
+#Raw Oblimin 3
+FMraw_ob3 = callData("FMraw_ob3")
+Fr_ob3 = FMraw_ob3 %>% dplyr::select(Fr.ob3_1:Fr.ob3_3)
+Mr_ob3 = FMraw_ob3 %>% dplyr::select(Mr.ob3_1:Mr.ob3_3)
+FC_FMr.ob3 = factor.congruence(Fr_ob3 , Mr_ob3)
+
+FMraw.ob3_p = plot.heatmap.original(Fr_ob3, Mr_ob3, "FMrOb3_original")
+FMraw.ob3_pAbs = plot.heatmap.abs(Fr_ob3, Mr_ob3, "FMrOb3_abs")
+(M_FMraw.ob3 = mean(abs(FC_FMr.ob3[1,1]),abs(FC_FMr.ob3[2,2]), abs(FC_FMr.ob3[3,3])))
+
+
+#Raw Oblimin 4
+FMraw_ob4 = callData("FMraw_ob4")
+Fr_ob4 = FMraw_ob4 %>% dplyr::select(Fr.ob4_1:Fr.ob4_4)
+Mr_ob4 = FMraw_ob4 %>% dplyr::select(Mr.ob4_1:Mr.ob4_4)
+FC_FMr.ob4 = factor.congruence(Fr_ob4 , Mr_ob4)
+
+FMraw.ob4_p = plot.heatmap.original(Fr_ob4, Mr_ob4, "FMrOb4_original")
+FMraw.ob4_pAbs = plot.heatmap.abs(Fr_ob4, Mr_ob4, "FMrOb4_abs")
+(M_FMraw.ob4 = mean(abs(FC_FMr.ob4[1,1]),abs(FC_FMr.ob4[2,2]), abs(FC_FMr.ob4[3,3]), abs(FC_FMr.ob4[4,4])))
+
+#Raw Oblimin 5
+FMraw_ob5 = callData("FMraw_ob5")
+Fr_ob5 = FMraw_ob5 %>% dplyr::select(Fr.ob5_1:Fr.ob5_5)
+Mr_ob5 = FMraw_ob5 %>% dplyr::select(Mr.ob5_1:Mr.ob5_5)
+FC_FMr.ob5 = factor.congruence(Fr_ob5 , Mr_ob5)
+
+FMraw.ob5_p = plot.heatmap.original(Fr_ob5, Mr_ob5, "FMrOb5_original")
+FMraw.ob5_pAbs = plot.heatmap.abs(Fr_ob5, Mr_ob5, "FMrOb5_abs")
+(M_FMraw.ob5 = mean(abs(FC_FMr.ob5[1,5]),abs(FC_FMr.ob5[2,3]), abs(FC_FMr.ob5[3,1]), abs(FC_FMr.ob5[4,2]), abs(FC_FMr.ob5[5,4])))
+
+#Raw Oblimin 6
+FMraw_ob6 = callData("FMraw_ob6")
+Fr_ob6 = FMraw_ob6 %>% dplyr::select(Fr.ob6_1:Fr.ob6_6)
+Mr_ob6 = FMraw_ob6 %>% dplyr::select(Mr.ob6_1:Mr.ob6_6)
+FC_FMr.ob6 = factor.congruence(Fr_ob6 , Mr_ob6)
+
+FMraw.ob6_p = plot.heatmap.original(Fr_ob6, Mr_ob6, "FMrOb6_original")
+FMraw.ob6_pAbs = plot.heatmap.abs(Fr_ob6, Mr_ob6, "FMrOb6_abs")
+(M_FMraw.ob6 = mean(abs(FC_FMr.ob6[1,5]),abs(FC_FMr.ob6[2,2]), abs(FC_FMr.ob6[3,1]), abs(FC_FMr.ob6[4,6]), abs(FC_FMr.ob6[5,3]), abs(FC_FMr.ob6[6,4])))
+
+
+#Raw Oblimin 7
+FMraw_ob7 = callData("FMraw_ob7")
+Fr_ob7 = FMraw_ob7 %>% dplyr::select(Fr.ob7_1:Fr.ob7_7)
+Mr_ob7 = FMraw_ob7 %>% dplyr::select(Mr.ob7_1:Mr.ob7_7)
+FC_FMr.ob7 = factor.congruence(Fr_ob7 , Mr_ob7)
+
+FMraw.ob7_p = plot.heatmap.original(Fr_ob7, Mr_ob7, "FMrOb7_original")
+FMraw.ob7_pAbs = plot.heatmap.abs(Fr_ob7, Mr_ob7, "FMrOb7_abs")
+(M_FMraw.ob7 = mean(abs(FC_FMr.ob7[1,5]),abs(FC_FMr.ob7[2,2]), abs(FC_FMr.ob7[3,1]), abs(FC_FMr.ob7[4,6]), abs(FC_FMr.ob7[5,3]), abs(FC_FMr.ob7[6,4]), abs(FC_FMr.ob7[7,7])))
+
+
+#Raw Oblimin 8
+FMraw_ob8 = callData("FMraw_ob8")
+Fr_ob8 = FMraw_ob8 %>% dplyr::select(Fr.ob8_1:Fr.ob8_8)
+Mr_ob8 = FMraw_ob8 %>% dplyr::select(Mr.ob8_1:Mr.ob8_8)
+FC_FMr.ob8 = factor.congruence(Fr_ob8 , Mr_ob8)
+
+FMraw.ob8_p = plot.heatmap.original(Fr_ob8, Mr_ob8, "FMrOb8_original")
+FMraw.ob8_pAbs = plot.heatmap.abs(Fr_ob8, Mr_ob8, "FMrOb8_abs")
+(M_FMraw.ob8 = mean(abs(FC_FMr.ob8[1,5]),abs(FC_FMr.ob8[2,2]), abs(FC_FMr.ob8[3,4]), abs(FC_FMr.ob8[4,6]), abs(FC_FMr.ob8[5,7]), abs(FC_FMr.ob8[6,3]), abs(FC_FMr.ob8[7,1]), abs(FC_FMr.ob8[8,8])))
+
+```
+
+##Ipsatized Oblimin
+```{r, eval = FALSE }
+gss_cat %>% 
+  count(denom)
+
+#Ips Oblimin 2
+FMz_ob2 = callData("FMz_ob2")
+Fz_ob2 = FMz_ob2 %>% dplyr::select(Fz.ob2_1:Fz.ob2_2)
+Mz_ob2 = FMz_ob2 %>% dplyr::select(Mz.ob2_1:Mz.ob2_2)
+FC_FMz.ob2 = factor.congruence(Fz_ob2 , Mz_ob2)
+
+FMz.ob2_p = plot.heatmap.original(Fz_ob2, Mz_ob2, "FMzOb2_original")
+FMz.ob2_pAbs = plot.heatmap.abs(Fz_ob2, Mz_ob2, "FMzOb2_abs")
+(M_FMz.ob2 = mean(abs(FC_FMz.ob2[1,1]),abs(FC_FMz.ob2[2,2])))
+
+#Ips Oblimin 3
+FMz_ob3 = callData("FMz_ob3")
+Fz_ob3 = FMz_ob3 %>% dplyr::select(Fz.ob3_1:Fz.ob3_3)
+Mz_ob3 = FMz_ob3 %>% dplyr::select(Mz.ob3_1:Mz.ob3_3)
+FC_FMz.ob3 = factor.congruence(Fz_ob3 , Mz_ob3)
+
+FMz.ob3_p = plot.heatmap.original(Fz_ob3, Mz_ob3, "FMzOb3_original")
+FMz.ob3_pAbs = plot.heatmap.abs(Fz_ob3, Mz_ob3, "FMzOb3_abs")
+(M_FMz.ob3 = mean(abs(FC_FMz.ob3[1,1]),abs(FC_FMz.ob3[2,2]), abs(FC_FMz.ob3[3,3])))
+
+#Ips Oblimin 4
+FMz_ob4 = callData("FMz_ob4")
+Fz_ob4 = FMz_ob4 %>% dplyr::select(Fz.ob4_1:Fz.ob4_4)
+Mz_ob4 = FMz_ob4 %>% dplyr::select(Mz.ob4_1:Mz.ob4_4)
+FC_FMz.ob4 = factor.congruence(Fz_ob4 , Mz_ob4)
+
+FMz.ob4_p = plot.heatmap.original(Fz_ob4, Mz_ob4, "FMzOb4_original")
+FMz.ob4_pAbs = plot.heatmap.abs(Fz_ob4, Mz_ob4, "FMzOb4_abs")
+(M_FMz.ob4 = mean(abs(FC_FMz.ob4[1,1]),abs(FC_FMz.ob4[2,2]), abs(FC_FMz.ob4[3,3]), abs(FC_FMz.ob4[4,4])))
+
+#Ips Oblimin 5
+FMz_ob5 = callData("FMz_ob5")
+Fz_ob5 = FMz_ob5 %>% dplyr::select(Fz.ob5_1:Fz.ob5_5)
+Mz_ob5 = FMz_ob5 %>% dplyr::select(Mz.ob5_1:Mz.ob5_5)
+FC_FMz.ob5 = factor.congruence(Fz_ob5 , Mz_ob5)
+
+FMz.ob5_p = plot.heatmap.original(Fz_ob5, Mz_ob5, "FMzOb5_original")
+FMz.ob5_pAbs = plot.heatmap.abs(Fz_ob5, Mz_ob5, "FMzOb5_abs")
+(M_FMz.ob5 = mean(abs(FC_FMz.ob5[1,1]),abs(FC_FMz.ob5[2,2]), abs(FC_FMz.ob5[3,3]), abs(FC_FMz.ob5[4,4]), abs(FC_FMz.ob5[5,5])))
+
+#Ips Oblimin 6
+FMz_ob6 = callData("FMz_ob6")
+Fz_ob6 = FMz_ob6 %>% dplyr::select(Fz.ob6_1:Fz.ob6_6)
+Mz_ob6 = FMz_ob6 %>% dplyr::select(Mz.ob6_1:Mz.ob6_6)
+FC_FMz.ob6 = factor.congruence(Fz_ob6 , Mz_ob6)
+
+FMz.ob6_p = plot.heatmap.original(Fz_ob6, Mz_ob6, "FMzOb6_original")
+FMz.ob6_pAbs = plot.heatmap.abs(Fz_ob6, Mz_ob6, "FMzOb6_abs")
+(M_FMz.ob6 = mean(abs(FC_FMz.ob6[1,4]),abs(FC_FMz.ob6[2,5]), abs(FC_FMz.ob6[3,3]), abs(FC_FMz.ob6[4,6]), abs(FC_FMz.ob6[5,1]), abs(FC_FMz.ob6[6,2])))
+
+#Ips Oblimin 7
+FMz_ob7 = callData("FMz_ob7")
+Fz_ob7 = FMz_ob7 %>% dplyr::select(Fz.ob7_1:Fz.ob7_7)
+Mz_ob7 = FMz_ob7 %>% dplyr::select(Mz.ob7_1:Mz.ob7_7)
+FC_FMz.ob7 = factor.congruence(Fz_ob7 , Mz_ob7)
+
+FMz.ob7_p = plot.heatmap.original(Fz_ob7, Mz_ob7, "FMzOb7_original")
+FMz.ob7_pAbs = plot.heatmap.abs(Fz_ob7, Mz_ob7, "FMrOb7_abs")
+(M_FMz.ob7 = mean(abs(FC_FMz.ob7[1,5]),abs(FC_FMz.ob7[2,3]), abs(FC_FMz.ob7[3,1]), abs(FC_FMz.ob7[4,6]), abs(FC_FMz.ob7[5,7]), abs(FC_FMz.ob7[6,4]), abs(FC_FMz.ob7[7,2])))
+
+
+#Ips Oblimin 8
+FMz_ob8 = callData("FMz_ob8")
+Fz_ob8 = FMz_ob8 %>% dplyr::select(Fz.ob8_1:Fz.ob8_8)
+Mz_ob8 = FMz_ob8 %>% dplyr::select(Mz.ob8_1:Mz.ob8_8)
+FC_FMz.ob8 = factor.congruence(Fz_ob8 , Mz_ob8)
+
+FMz.ob8_p = plot.heatmap.original(Fz_ob8, Mz_ob8, "FMzOb8_original")
+FMz.ob8_pAbs = plot.heatmap.abs(Fz_ob8, Mz_ob8, "FMzOb8_abs")
+(M_FMz.ob8 = mean(abs(FC_FMz.ob8[1,8]),abs(FC_FMz.ob8[2,3]), abs(FC_FMz.ob8[3,1]), abs(FC_FMz.ob8[4,2]), abs(FC_FMz.ob8[5,7]), abs(FC_FMz.ob8[6,4]), abs(FC_FMz.ob8[7,5]), abs(FC_FMz.ob8[8,6])))
+
+```
+
+##Solutions from PA
+```{r}
+#Raw varimax 11
+FMraw_vx11 = callData("FMraw_vx11")
+Fr_vx11 = FMraw_vx11 %>%  dplyr::select(Fr.vx11_1:Fr.vx11_11)
+Mr_vx11 = FMraw_vx11 %>% dplyr::select(Mr.vx11_1:Mr.vx11_11)
+FC_FMr.vx11 = factor.congruence(Fr_vx11, Mr_vx11)
+#write.xlsx(FC_FMraw.vx11, file = "MFcongruence.xlsx", sheetName = "FC_FMraw.vx11", append = FALSE)
+
+
+FMraw.vx11_p = plot.heatmap.original(Fr_vx11, Mr_vx11, "FMrVar11_original")
+FMraw.vx11_pAbs = plot.heatmap.abs(Fr_vx11, Mr_vx11, "FMrVar11_abs")
+(M_FMraw.vx11 = mean(abs(FC_FMr.vx11[1,1]),abs(FC_FMr.vx11[10,7]),abs(FC_FMr.vx11[11,8]), abs(FC_FMr.vx11[2,2]), abs(FC_FMr.vx11[3,6]),  abs(FC_FMr.vx11[4,10]), abs(FC_FMr.vx11[5,4]), abs(FC_FMr.vx11[6,5]), abs(FC_FMr.vx11[7,11]), abs(FC_FMr.vx11[8,3]), abs(FC_FMr.vx11[9,9])))
+  
+#Raw oblimin 13
+FMraw_ob13 = callData("FMraw_ob13")
+Fr_ob13 = FMraw_ob13 %>% dplyr::select(Fr.ob13_1:Fr.ob13_13)
+Mr_ob13 = FMraw_ob13 %>% dplyr::select(Mr.ob13_1:Mr.ob13_13)
+FC_FMr.ob13 = factor.congruence(Fr_ob13, Mr_ob13)
+#write.xlsx(FC_FMraw.ob13, file = "MFcongruence.xlsx", sheetName = "FC_FMraw.ob13", append = T)
+
+HungarianSolver(-1*(abs(FC_FMr.ob13)))
+optimum_cc(Fr_vx5, Mr_vx5)
+
+FMraw.ob13_p = plot.heatmap.original(Fr_ob13, Mr_ob13, "FMrOb13_original")
+FMraw.ob13_pAbs = plot.heatmap.abs(Fr_ob13, Mr_ob13, "FMrOb13_abs")
+(M_FMraw.ob13 = mean(abs(FC_FMr.ob13[1,6]),abs(FC_FMr.ob13[10,11]), abs(FC_FMr.ob13[11,12]), abs(FC_FMr.ob13[12,8]), abs(FC_FMr.ob13[13,4]), abs(FC_FMr.ob13[2,10]), abs(FC_FMr.ob13[3,3]), abs(FC_FMr.ob13[4,9]), abs(FC_FMr.ob13[5,1]),  abs(FC_FMr.ob13[6,2]), abs(FC_FMr.ob13[7,7]), abs(FC_FMr.ob13[8,5]), abs(FC_FMr.ob13[9,13])))
+
+#Raw equamax 15
+FMraw_eq15 = callData("FMraw_eq15")
+Fr_eq15 = FMraw_eq15%>% dplyr::select(Fr.eq15_1:Fr.eq15_15)
+Mr_eq15 = FMraw_eq15 %>% dplyr::select(Mr.eq15_1:Mr.eq15_15)
+FC_FMr.eq15 = factor.congruence(Fr_eq15, Mr_eq15)
+
+HungarianSolver(-1*(abs(FC_FMr.eq15)))
+
+ mat_long = reshape2::melt(FC_FMr.eq15, na.rm=TRUE, value.name="cc")
+
+#write.xlsx(FC_FMraw.eq15, file = "MFcongruence.xlsx", sheetName = "FC_FMraw.eq15", append = T)
+
+
+FMraw.eq15_p = plot.heatmap.original(Fr_eq15, Mr_eq15, "FMrEq15_original")
+FMraw.eq15_pAbs = plot.heatmap.abs(Fr_eq15, Mr_eq15, "FMrEq15_abs")
+(M_FMr.eq15 = mean(abs(FC_FMr.eq15[1,3]),abs(FC_FMr.eq15[10,14]), abs(FC_FMr.eq15[11,7]), abs(FC_FMr.eq15[12,10]), abs(FC_FMr.eq15[13,6]), abs(FC_FMr.eq15[14,13]), abs(FC_FMr.eq15[15,15]), abs(FC_FMr.eq15[2,8]), abs(FC_FMr.eq15[3,1]),  abs(FC_FMr.eq15[4,12]), abs(FC_FMr.eq15[5,4]), abs(FC_FMr.eq15[6,9]), abs(FC_FMr.eq15[7,11]), abs(FC_FMr.eq15[8,5]), abs(FC_FMr.eq15[9,2])))
+
+#Ipsatized varimax 12
+FMz_vx12 = callData("FMz_vx12")
+Fz_vx12 = FMz_vx12 %>% dplyr::select(Fz.vx12_1:Fz.vx12_12)
+Mz_vx12 = FMz_vx12 %>% dplyr::select(Mz.vx12_1:Mz.vx12_12)
+FC_FMz.vx12 = factor.congruence(Fz_vx12, Mz_vx12)
+#write.xlsx(FC_FMz.vx12, file = "MFcongruence.xlsx", sheetName = "FC_FMraw.vx12", append = T)
+
+
+FMz.vx12_p =  plot.heatmap.original(Fz_vx12, Mz_vx12, "FMzVar12_original")
+FMz.vx12_pAbs = plot.heatmap.abs(Fz_vx12, Mz_vx12, "FMzVar12_abs")
+(M_FMz.vx12 = mean(abs(FC_FMz.vx12[1,1]),abs(FC_FMz.vx12[10,7]),abs(FC_FMz.vx12[11,8]), abs(FC_FMz.vx12[12,10]), abs(FC_FMz.vx12[2,4]),  abs(FC_FMz.vx12[3,12]), abs(FC_FMz.vx12[4,6]), abs(FC_FMz.vx12[5,3]), abs(FC_FMz.vx12[6,2]), abs(FC_FMz.vx12[8,3]), abs(FC_FMz.vx12[7,7]), abs(FC_FMz.vx12[8,9], abs(FC_FMz.vx12[9,5]))))
+
+
+#Ipsatized  oblimin 18
+FMz_ob18 =  callData("FMz_ob18")
+
+Fz_ob18 = FMz_ob18 %>%  dplyr::select(Fz.ob18_1:Fz.ob18_18)
+Mz_ob18 = FMz_ob18 %>%  dplyr::select(Mz.ob18_1:Mz.ob18_18)
+FC_FMz.ob18 = factor.congruence(Fz_ob18, Mz_ob18)
+
+HungarianSolver(-1*(abs(FC_FMz.ob18)))
+#write.xlsx(FC_FMz.ob18, file = "MFcongruence.xlsx", sheetName = "FC_FMz.ob18 ", append = T)
+
+FMz.ob18_p = plot.heatmap.original(Fz_ob18, Mz_ob18, "FMzOb18_original")
+FMz.ob18_pAbs = plot.heatmap.abs(Fz_ob18, Mz_ob18, "FMzOb18_abs")
+(M_FMz.ob18 = mean(abs(FC_FMz.ob18[1,2]),abs(FC_FMz.ob18[10,4]), abs(FC_FMz.ob18[11,10]), abs(FC_FMz.ob18[12,18]), abs(FC_FMz.ob18[13,9]), abs(FC_FMz.ob18[14,12]), abs(FC_FMz.ob18[15,8]), abs(FC_FMz.ob18[16,1]), abs(FC_FMz.ob18[17,11]), abs(FC_FMz.ob18[18,13]), abs(FC_FMz.ob18[2,3]), abs(FC_FMz.ob18[3,14]), abs(FC_FMz.ob18[4,7]), abs(FC_FMz.ob18[5,16]), abs(FC_FMz.ob18[6,5]), abs(FC_FMz.ob18[7,17]), abs(FC_FMz.ob18[8,15]), abs(FC_FMz.ob18[9,6])))
+
+
+
+#Ipsatized  equamax 19
+FMz_eq19 = callData("FMz_eq19")
+
+Fz_eq19 = FMz_eq19%>% dplyr::select(Fz.eq19_1:Fz.eq19_19)
+Mz_eq19 = FMz_eq19 %>% dplyr::select(Mz.eq19_1:Mz.eq19_19)
+FC_FMz.eq19 = factor.congruence(Fz_eq19, Mz_eq19)
+
+#write.xlsx(FC_FMz.eq19, file = "MFcongruence.xlsx", sheetName = "FC_FMz.eq19", append = T)
+
+FMz.eq19_p = plot.heatmap.original(Fz_eq19, Mz_eq19, "FMzEq19_original")
+FMz.eq19_pAbs = plot.heatmap.abs(Fz_eq19, Mz_eq19, "FMzEq19_abs")
+(M_FMz.eq19 = mean(abs(FC_FMz.eq19[1,3]),abs(FC_FMz.eq19[10,13]), abs(FC_FMz.eq19[11,11]), abs(FC_FMz.eq19[12,19]), abs(FC_FMz.eq19[13,15]), abs(FC_FMz.eq19[14,14]), abs(FC_FMz.eq19[15,6]), abs(FC_FMz.eq19[16,16]), abs(FC_FMz.eq19[17,8]),  abs(FC_FMz.eq19[18,10]), abs(FC_FMz.eq19[19,18]), abs(FC_FMz.eq19[2,9]), abs(FC_FMz.eq19[3,12]),abs(FC_FMz.eq19[4,2]), abs(FC_FMz.eq19[5,4]), abs(FC_FMz.eq19[6,7]), abs(FC_FMz.eq19[7,5]), abs(FC_FMz.eq19[8,1]), abs(FC_FMz.eq19[9,17])))
+
+HungarianSolver(-1*(abs(FC_FMz.eq19)))
+```
+
+
+
+```{r}
+m <- matrix( runif(41*41), nrow = 41)
+HungarianSolver(-1*(abs(m)))
+```
+
+## PDF files
+```{r, eval = FALSE}
+
+#PDF 1
+pdf("CongCoeff2.pdf", width = 16 , height = 10, title = "Congruence Coefficient Plots")
+par(mfrow=c(12,1))
+
+FMraw.unr1_p
+FMraw.unr1_pAbs
+FMraw.vx2_p
+FMraw.vx2_pAbs
+FMraw.vx3_p
+FMraw.vx3_pAbs
+FMraw.vx4_p
+FMraw.vx4_pAbs
+FMraw.vx5_p
+FMraw.vx5_pAbs
+FMraw.vx6_p
+FMraw.vx6_pAbs
+FMraw.vx7_p
+FMraw.vx7_pAbs
+FMraw.vx8_p
+FMraw.vx8_pAbs
+FMraw.ob2_p
+FMraw.ob2_pAbs
+FMraw.ob3_p
+FMraw.ob3_pAbs
+FMraw.ob4_p
+FMraw.ob4_pAbs
+FMraw.ob5_p
+FMraw.ob5_pAbs
+FMraw.ob6_p
+FMraw.ob6_pAbs
+FMraw.ob7_p
+FMraw.ob7_pAbs
+
+
+FMraw.vx11_p
+FMraw.vx11_pAbs
+FMraw.ob13_p
+FMraw.ob13_pAbs
+FMraw.eq15_p
+FMraw.eq15_pAbs
+FMz.vx12_p 
+FMz.vx12_pAbs
+FMz.ob18_p
+FMz.ob18_pAbs
+FMz.eq19_p
+FMz.eq19_pAbs
+
+dev.off()
+
+#PDF 2
+pdf("CongCoeff2.pdf", width = 16 , height = 10, title = "Congruence Coefficient Plots")
+par(mfrow=c(12,1))
+
+FMz.unr1_p
+FMz.unr1_pAbs
+
+
+FMz.vx2_p 
+FMz.vx2_pAbs
+FMz.vx3_p
+FMz.vx3_pAbs
+FMz.vx4_p 
+FMz.vx4_pAbs
+FMz.vx5_p 
+FMz.vx5_pAbs
+FMz.vx6_p 
+FMz.vx6_pAbs
+FMz.vx7_p 
+FMz.vx7_pAbs
+FMz.vx8_p 
+FMz.vx8_pAbs
+
+
+FMz.ob2_p 
+FMz.ob2_pAbs
+FMz.ob3_p
+FMz.ob3_pAbs
+FMz.ob4_p
+FMz.ob4_pAbs
+FMz.ob5_p
+FMz.ob5_pAbs
+FMz.ob6_p 
+FMz.ob6_pAbs
+FMz.ob7_p
+FMz.ob7_pAbs
+FMraw.ob8_p 
+FMraw.ob8_pAbs
+FMz.ob8_p
+FMz.ob8_pAbs
+
+dev.off()
+
+#PDF 3
+pdf("CongCoeff3.pdf", width = 16 , height = 10, title = "Congruence Coefficient Plots")
+par(mfrow=c(2,1))
+
+FMz.ob6_p 
+FMz.ob6_pAbs
+
+dev.off()
+
+```
+
+## Proportion of variance for factors 1
+```{r}
+
+df <- rio::import(here::here("data", "typenoun_FSonly.sav"), setclass = "tbl_df")
+
+as_tibble(df) %>% 
+  dplyr::select(fsr1unr1, fsz1unr1) %>% 
+  lm(fsr1unr1 ~ fsz1unr1,.) %>% 
+  summary()
+
+```
+
+##
+```{r}
+data.Etic = rio::import(here::here("data", "typenoun_withetics.sav"), setclass = "tbl_df")
+names(data.Etic)
+
+data_etic = data.Etic %>% 
+  dplyr::select(scb5_i:scb5_v, fsr1unr1:fsr13ob13) %>% 
+  as.tibble()
+
+data_etic %>% 
+  dplyr::select(fsr1unr1, scb5_i:scb5_v) %>% 
+  cor()
+dim(data_etic)
+
+data_etic %>% 
+  dplyr::select(fsr1unr1, scb5_i:scb5_v) %>% 
+  corrr::correlate(x = ., 
+                     method = "pearson", 
+                     quiet = TRUE) %>% 
+  corrr::rplot(rdf = ., shape = 19,
+               colors = c("yellow", 
+                          "purple"))
+
+
+flattenCorrMatrix <- function(cormat, pmat) {
+  ut <- upper.tri(cormat)
+  data.frame(
+    row = rownames(cormat)[row(cormat)[ut]],
+    column = rownames(cormat)[col(cormat)[ut]],
+    cor  =(cormat)[ut],
+    p = pmat[ut]
+    )
+}
+options(scipen = 999)
+library(Hmisc)
+res2<-rcorr(as.matrix(data_etic))
+flat.etic = flattenCorrMatrix(res2$r, res2$P)
+
+#write.csv(flat.etic,"correlations.w.Big5.csv", fileEncoding = "macroman")
+
+wide = reshape(flat.etic[,1:3], idvar = c("row"),
+timevar="column", direction = "wide")
+rownames(wide) = wide$row
+wide = wide[,-1]
+colnames(wide) = sub("beta.", "", colnames(wide))
+
+## Pass it to corrplot
+library(corrplot)
+corrplot(as.matrix(wide), is.corr=FALSE, tl.srt=0)
+
+```
+

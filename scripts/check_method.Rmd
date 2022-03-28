@@ -1,0 +1,157 @@
+---
+title: "Method Check"
+author: "Vinita Vader"
+date: "2/6/2022"
+output:
+  html_document: 
+    toc: yes
+    toc_float: true
+    df_print: paged
+    theme: cosmo
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(jtools)
+library(readxl)
+library(purrr)
+library(kableExtra)
+```
+
+# Functions
+```{r}
+#Adds id columns to the pairs 
+ add_id_pairs <- function(pair){
+   df <- pair %>% 
+     data.frame() %>% 
+     mutate(id = str_c(X1, "_",X2)) %>% 
+     rename( "left_factor" = "X1",
+            "top_factor" = "X2" )
+   df
+ }
+ 
+ #Adds id columns to the mat long 
+ add_id_matLong <- function(mat_long){
+retain_rows <- mat_long %>%
+  data.frame() %>% 
+  #extract digits after the 2nd underscore
+  mutate(left_factor = str_extract(Var1 , "[^eq]*$"),
+         top_factor = str_extract(Var2 , "[^ob]*$"),
+         id = paste0(left_factor, "_", top_factor)) %>% 
+  select(-left_factor, - top_factor)
+retain_rows
+ }
+ 
+#Fucntion to compute congruence coefficients
+ compute_avg.cc <- function(model){
+  avg_cc <- model %>% 
+      summarise(avg_cc = mean(abs(cc)))
+  avg_cc 
+}
+```
+
+
+
+
+# Sheet 1
+```{r}
+ob42_mat <- read_xlsx(here::here("data", "CorrelationsBetweenFactorScoresFromDifferingRotationMethods_42and50only.xlsx"), sheet = "42oblimin") %>% 
+  janitor::clean_names() %>% 
+  tibble() %>% 
+  filter(str_detect(x2, 'fsr42eq')) %>%
+  column_to_rownames(var="x2") %>% 
+  select(fsr42ob1:fsr42ob42) %>% 
+  as.matrix()
+
+pairs1 <- RcppHungarian::HungarianSolver(-1*(abs(ob42_mat)))$pairs
+pairs1 <- add_id_pairs(pairs1)
+
+mat_long1 <- reshape2::melt(ob42_mat, na.rm=TRUE, value.name="cc")
+mat_long1 <- add_id_matLong(mat_long1) 
+
+final_1 <- semi_join(mat_long1, pairs1, by = "id") 
+final_1 %>% compute_avg.cc #compute average congruence coefficient
+  
+
+```
+
+```{r}
+final_1%>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), fixed_thead = T)
+```
+
+
+# Function changes - Sheet 2
+```{r}
+ #Adds id columns to the mat long 
+ add_id_matLong <- function(mat_long){
+retain_rows <- mat_long %>%
+  data.frame() %>% 
+  #extract digits after "ob" and "eq"
+  mutate(left_factor = str_extract(Var1 , "[^ob]*$"),
+         top_factor = str_extract(Var2 , "[^eq]*$"),
+         id = paste0(left_factor, "_", top_factor)) %>% 
+  select(-left_factor, - top_factor)
+retain_rows
+ }
+```
+
+
+# Sheet 2
+```{r}
+eqx42_mat <- read_xlsx(here::here("data", "CorrelationsBetweenFactorScoresFromDifferingRotationMethods_42and50only.xlsx"), sheet = "42eqx") %>% 
+  janitor::clean_names() %>% 
+  tibble() %>% 
+  filter(str_detect(x2, 'fsz42ob')) %>%
+  column_to_rownames(var="x2") %>% 
+  select(fsz42eq1:fsz42eq42) %>% 
+  as.matrix()
+
+pairs2 <- RcppHungarian::HungarianSolver(-1*(abs(eqx42_mat)))$pairs
+pairs2 <- add_id_pairs(pairs2)
+
+mat_long2 <- reshape2::melt(eqx42_mat, na.rm=TRUE, value.name="cc")
+mat_long2 <- add_id_matLong(mat_long2) 
+
+final_2 <- semi_join(mat_long2, pairs2, by = "id") 
+final_2 %>% compute_avg.cc #compute average congruence coefficient
+```
+
+```{r}
+final_2%>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), fixed_thead = T)
+```
+
+
+# Sheet 3
+```{r}
+factors50_mat <- read_xlsx(here::here("data", "CorrelationsBetweenFactorScoresFromDifferingRotationMethods_42and50only.xlsx"), sheet = "50factors") %>% 
+  janitor::clean_names() %>% 
+  tibble() %>% 
+  filter(str_detect(x2, 'fsr50ob')) %>%
+  column_to_rownames(var="x2") %>% 
+  select(fsr50eq1:fsr50eq50) %>% 
+  as.matrix()
+
+pairs3 <- RcppHungarian::HungarianSolver(-1*(abs(factors50_mat)))$pairs
+pairs3 <- add_id_pairs(pairs3)
+
+mat_long3 <- reshape2::melt(factors50_mat, na.rm=TRUE, value.name="cc")
+mat_long3 <- add_id_matLong(mat_long3) 
+
+
+final_3 <- semi_join(mat_long3, pairs3, by = "id") 
+final_3 %>% compute_avg.cc #compute average congruence coefficient
+```
+
+```{r}
+final_3 %>% 
+  kbl() %>% 
+  kable_styling(bootstrap_options = c("striped", "hover"), fixed_thead = T)
+```
+
